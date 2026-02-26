@@ -295,4 +295,4 @@ jobs:
         with:
           name: AAPS-Signed-APK
           path: "**/*.apk"
-          retention-days: 90
+          retention-days: 365
