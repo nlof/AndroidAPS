@@ -17,7 +17,6 @@ on:
           - aapsclient2Debug
           - pumpcontrolRelease
           - pumpcontrolDebug
-
 jobs:
   build:
     name: Build AAPS
@@ -295,4 +294,3 @@ jobs:
         with:
           name: AAPS-Signed-APK
           path: "**/*.apk"
-          retention-days: 365
