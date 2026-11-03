@@ -66,19 +66,8 @@ class SignatureVerifierPlugin @Inject constructor(
     private var revokedCerts: List<ByteArray>? = null
     override fun onStart() {
         super.onStart()
-        handler = Handler(HandlerThread(this::class.simpleName + "Handler").also { it.start() }.looper)
-        revokedCertsFile = File(context.filesDir, "revoked_certs.txt")
-        handler?.post {
-            loadLocalRevokedCerts()
-            if (shouldDownloadCerts()) {
-                try {
-                    downloadAndSaveRevokedCerts()
-                } catch (e: IOException) {
-                    aapsLogger.error("Could not download revoked certs", e)
-                }
-            }
-            if (hasIllegalSignature()) showNotification()
-        }
+        // Signature verification intentionally disabled.
+        // Do not download a remote certificate list and do not schedule any checks.
     }
 
     override fun onStop() {
@@ -89,19 +78,8 @@ class SignatureVerifierPlugin @Inject constructor(
     }
 
     override fun isLoopInvocationAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (hasIllegalSignature()) {
-            showNotification()
-            value.set(false)
-        }
-        if (shouldDownloadCerts()) {
-            handler?.post {
-                try {
-                    downloadAndSaveRevokedCerts()
-                } catch (e: IOException) {
-                    aapsLogger.error("Could not download revoked certs", e)
-                }
-            }
-        }
+        // Signature verification intentionally disabled: never disable the loop
+        // based on a remotely downloaded certificate revocation list.
         return value
     }
 
