@@ -76,19 +76,7 @@ class SignatureVerifierPlugin(
     private var revokedCerts: List<ByteArray>? = null
     override suspend fun onStart() {
         super.onStart()
-        handler = Handler(HandlerThread(this::class.simpleName + "Handler").also { it.start() }.looper)
-        revokedCertsFile = File(context.filesDir, "revoked_certs.txt")
-        handler?.post {
-            loadLocalRevokedCerts()
-            if (shouldDownloadCerts()) {
-                try {
-                    downloadAndSaveRevokedCerts()
-                } catch (e: IOException) {
-                    aapsLogger.error("Could not download revoked certs", e)
-                }
-            }
-            if (hasIllegalSignature()) showNotification()
-        }
+        // Signature based disabling is intentionally disabled.
     }
 
     override suspend fun onStop() {
@@ -99,19 +87,7 @@ class SignatureVerifierPlugin(
     }
 
     override fun isLoopInvocationAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (hasIllegalSignature()) {
-            showNotification()
-            value.set(false)
-        }
-        if (shouldDownloadCerts()) {
-            handler?.post {
-                try {
-                    downloadAndSaveRevokedCerts()
-                } catch (e: IOException) {
-                    aapsLogger.error("Could not download revoked certs", e)
-                }
-            }
-        }
+        // Do not fetch revoked certificates or block the loop based on the APK signature.
         return value
     }
 
