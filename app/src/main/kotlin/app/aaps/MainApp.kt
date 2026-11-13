@@ -56,11 +56,8 @@ import app.aaps.settingsstore.AndroidStorage
 import app.aaps.settingsstore.IdleWorkerFactory
 import app.aaps.settingsstore.SettingsUnreadableNotification
 import app.aaps.utils.configureLeakCanary
-import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
-import com.google.firebase.remoteconfig.remoteConfig
 import dev.zacsweers.metrox.viewmodel.MetroViewModelFactory
 import io.reactivex.rxjava3.exceptions.UndeliverableException
 import io.reactivex.rxjava3.plugins.RxJavaPlugins
@@ -75,14 +72,9 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonObject
 import rxdogtag2.RxDogTag
 import java.io.IOException
 import java.util.Locale
-import kotlin.reflect.KMutableProperty
-import kotlin.reflect.full.declaredMemberProperties
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import android.content.res.Configuration as ResourcesConfiguration
@@ -139,7 +131,6 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
 
     private val pluginStore get() = metroGraphs.pluginStore
     private val aapsLogger get() = metroGraphs.aapsLogger
-    private val versionCheckersUtils get() = metroGraphs.versionCheckerUtils
     private val sp get() = metroGraphs.keyValueStore
     private val preferences get() = metroGraphs.preferences
     private val config get() = metroGraphs.config
@@ -483,8 +474,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         registerLocalBroadcastReceiver()
         setupRemoteConfig()
 
-        // trigger here to see the new version on app start after an update
-        handler.postDelayed({ versionCheckersUtils.triggerCheckVersion() }, 30000)
+        // Version expiry checks are intentionally disabled.
 
         // delayed actions to make rh context updated for translations
         handler.postDelayed(
@@ -893,36 +883,8 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
     }
 
     private fun setupRemoteConfig() {
+        // Initialize Firebase for Crashlytics without fetching remote version definitions.
         FirebaseApp.initializeApp(this)
-        Firebase.remoteConfig.also { firebaseRemoteConfig ->
-
-            firebaseRemoteConfig.setConfigSettingsAsync(
-                FirebaseRemoteConfigSettings
-                    .Builder()
-                    .setMinimumFetchIntervalInSeconds(3600)
-                    .build()
-            )
-            firebaseRemoteConfig
-                .fetchAndActivate()
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        aapsLogger.debug("RemoteConfig received successfully")
-                        @Suppress("UNCHECKED_CAST")
-                        (versionCheckersUtils::class.declaredMemberProperties.find { it.name == "definition" } as KMutableProperty<Any>?)
-                            ?.let {
-                                // `definition` is read through reflection, so the cast below is unchecked and the
-                                // compiler cannot see it. It said JSONObject long after the property became a
-                                // kotlinx JsonObject, and the app crashed on start as soon as a remote config
-                                // fetch actually succeeded - which needs network and Play Services, so no test or
-                                // CI build ever reached it. Keep the two types here in step by hand.
-                                val current = it.getter.call(versionCheckersUtils) as JsonObject
-                                val remote = Json.parseToJsonElement(firebaseRemoteConfig.getString("defs")).jsonObject
-                                // Plus on the maps is a shallow merge with the remote keys winning.
-                                it.setter.call(versionCheckersUtils, JsonObject(current + remote))
-                            }
-                    } else aapsLogger.error("RemoteConfig fetch failed")
-                }
-        }
     }
 
     override fun onTerminate() {

@@ -49,7 +49,7 @@ class PluginLifetimeWorkScanTest {
         "IntelligoPlugin#onStart" to "same handler, torn down in onStop",
         "RandomBgPlugin#interval" to "the refreshLoop it posts is removed in onStop",
         "RandomBgPlugin#onStart" to "same handler, torn down in onStop",
-        "SignatureVerifierPlugin#onStart" to "onStop removes the callbacks, quits the looper and nulls the handler",
+        "SignatureVerifierPlugin#onStart" to "signature verification is disabled, so onStart schedules no background work",
         "OmnipodDashPumpPlugin#scope" to "onStop cancels the scope and tears the handler down",
         "OmnipodDashPumpPlugin#onStart" to "onStop cancels the scope and tears the handler down",
         "LoopPlugin#scheduleBuildAndStoreDeviceStatus" to "the job is held in deviceStatusJob and onStop cancels it",
